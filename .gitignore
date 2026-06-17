@@ -1,0 +1,37 @@
+# Dataset — too large for GitHub (14 GB)
+# Run download_data.py to get it
+data/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Generated plots
+*.pdf
+
+# blackSwan dataset (too large for GitHub)
+blackSwan_data/
+
+# ZIP files
+*.zip
+
+# SSH config
+.sixth/
+
+# Reference material (not part of this work)
+Notebook-Fair-Universe-KAN-Victor-Borck-main/
+
+# Exploratory/debug scripts not suitable for public release
+download_blackSwan.py
+
+# HPC job logs and scripts
+logs/
+run_notebook.slurm
+monitor.sh
+
+# 1M backup notebook (2M run is the submission)
+KAN_Higgs_Internship_output_1130477.ipynb
+KAN_Higgs_Internship.ipynb
