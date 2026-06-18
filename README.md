@@ -89,17 +89,16 @@ EPOCHS_MAIN = 500
 ## Results
 
 All metrics are mean ± σ over 200 bootstrap resamples on the held-out test set (300,000 events).
-AMS uses LHC-normalised weights (s = 152 expected signal events, b = 157,559 background events in test set).
-Reference: Higgs=1,015 / Bkg=1,050,370 for full 10 fb⁻¹ dataset — Zenodo #15131565.
+AMS uses LHC-normalised weights scaled to the full 10 fb⁻¹ luminosity (s = 1,015 expected signal events, b = 1,050,370 background events — the Zenodo "LHC Events" counts, #15131565).
 
 ### Full experiment: 2M events · 500 epochs · KAN hidden=[128], G=8, k=2
 
 | Model | Params | AUC ± σ | AMS ± σ | Max AUC drop |
 |---|---|---|---|---|
-| XGBoost | — | 0.8533 ± 0.0008 | 0.8770 ± 0.0067 | 0.0521 |
-| KAN (base, G=8, k=2) | 39,681 | 0.8472 ± 0.0008 | 0.8084 ± 0.0064 | 0.0450 |
-| KAN + grid extension | 50,433 | 0.8432 ± 0.0008 | 0.8172 ± 0.0065 | **0.0268** |
-| KAN-Adversarial | 39,681 | 0.8436 ± 0.0008 | 0.8310 ± 0.0069 | 0.0445 |
+| XGBoost | — | 0.8533 ± 0.0008 | 2.2643 ± 0.0173 | 0.0521 |
+| KAN (base, G=8, k=2) | 39,681 | 0.8472 ± 0.0008 | 2.0874 ± 0.0165 | 0.0450 |
+| KAN + grid extension | 50,433 | 0.8432 ± 0.0008 | 2.1100 ± 0.0167 | **0.0268** |
+| KAN-Adversarial | 39,681 | 0.8436 ± 0.0008 | 2.1456 ± 0.0178 | 0.0445 |
 
 **Max AUC drop**: AUC degradation under momentum energy scale shifts γ ∈ [0.8, 1.2] — lower is more robust.
 
