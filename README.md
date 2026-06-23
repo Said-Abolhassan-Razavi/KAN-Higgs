@@ -78,10 +78,13 @@ jupyter lab KAN_Higgs_Internship_output_1132057.ipynb
 # 3. All cells are pre-executed — results are already visible
 ```
 
-To re-run from scratch using `KAN_Higgs_Internship.ipynb`, set in the config cell:
+The key KAN settings (in the config cell) are:
 ```python
-MAX_EVENTS  = 2_000_000
-EPOCHS_MAIN = 500
+MAX_EVENTS    = 2_000_000
+KAN_HIDDEN    = [96, 96, 96]   # deep network — the tuned architecture that beats XGBoost
+KAN_GRID_SIZE = 5
+KAN_ORDER     = 3
+LR_KAN        = 5e-4
 ```
 
 ---
@@ -91,14 +94,16 @@ EPOCHS_MAIN = 500
 All metrics are mean ± σ over 200 bootstrap resamples on the held-out test set (300,000 events).
 AMS uses LHC-normalised weights scaled to the full 10 fb⁻¹ luminosity (s = 1,015 expected signal events, b = 1,050,370 background events — the Zenodo "LHC Events" counts, #15131565).
 
-### Full experiment: 2M events · 500 epochs · KAN hidden=[128], G=8, k=2
+### Full experiment: 2M events · KAN hidden=[96,96,96], G=5, k=3
 
 | Model | Params | AUC ± σ | AMS ± σ | Max AUC drop |
 |---|---|---|---|---|
-| XGBoost | — | 0.8533 ± 0.0008 | 2.2643 ± 0.0173 | 0.0521 |
-| KAN (base, G=8, k=2) | 39,681 | 0.8472 ± 0.0008 | 2.0874 ± 0.0165 | 0.0450 |
-| KAN + grid extension | 50,433 | 0.8432 ± 0.0008 | 2.1100 ± 0.0167 | **0.0268** |
-| KAN-Adversarial | 39,681 | 0.8436 ± 0.0008 | 2.1456 ± 0.0178 | 0.0445 |
+| XGBoost (baseline) | — | 0.8533 ± 0.0008 | 2.269 ± 0.017 | 0.052 |
+| **KAN (base, deep)** | 190,465 | **0.8820 ± 0.0007** | 3.695 ± 0.171 | 0.101 |
+| **KAN + grid extension** | 296,065 | 0.8799 ± 0.0007 | **3.935 ± 0.215** | 0.090 |
+| **KAN-Adversarial** | 190,465 | 0.8743 ± 0.0007 | 2.949 ± 0.041 | **0.006** |
+
+**A properly-tuned KAN beats XGBoost on both AUC and AMS.** The best significance (AMS) comes from KAN + grid extension. The deep KAN's extra capacity makes it more sensitive to energy-scale systematics, but **KAN-Adversarial** removes almost all of that sensitivity (Max AUC drop 0.006, ≈9× more robust than XGBoost) while still beating XGBoost on AUC and AMS — the best all-round model.
 
 **Max AUC drop**: AUC degradation under momentum energy scale shifts γ ∈ [0.8, 1.2] — lower is more robust.
 

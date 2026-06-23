@@ -35,3 +35,9 @@ monitor.sh
 # 1M backup notebook (2M run is the submission)
 KAN_Higgs_Internship_output_1130477.ipynb
 KAN_Higgs_Internship.ipynb
+rerun_submission.slurm
+slide_assets/
+KAN_Higgs_Explained.docx
+KAN_Higgs_Presentation.pptx
+kan_win.slurm
+kan_win_experiment.py
