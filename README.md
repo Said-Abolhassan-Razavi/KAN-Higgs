@@ -98,10 +98,10 @@ AMS uses LHC-normalised weights scaled to the full 10 fb⁻¹ luminosity (s = 1,
 
 | Model | Params | AUC ± σ | AMS ± σ | Max AUC drop |
 |---|---|---|---|---|
-| XGBoost (baseline) | — | 0.8533 ± 0.0008 | 2.269 ± 0.017 | 0.052 |
 | **KAN (base, deep)** | 190,465 | **0.8820 ± 0.0007** | 3.695 ± 0.171 | 0.101 |
 | **KAN + grid extension** | 296,065 | 0.8799 ± 0.0007 | **3.935 ± 0.215** | 0.090 |
 | **KAN-Adversarial** | 190,465 | 0.8743 ± 0.0007 | 2.949 ± 0.041 | **0.006** |
+| XGBoost (baseline) | — | 0.8533 ± 0.0008 | 2.269 ± 0.017 | 0.052 |
 
 **A properly-tuned KAN beats XGBoost on both AUC and AMS.** The best significance (AMS) comes from KAN + grid extension. The deep KAN's extra capacity makes it more sensitive to energy-scale systematics, but **KAN-Adversarial** removes almost all of that sensitivity (Max AUC drop 0.006, ≈9× more robust than XGBoost) while still beating XGBoost on AUC and AMS — the best all-round model.
 
