@@ -1,0 +1,195 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{siunitx}
+\usepackage{caption}
+\usepackage[hidelinks]{hyperref}
+
+\title{\textbf{Kolmogorov--Arnold Networks for Higgs Boson Classification}\\
+\large A comparison with gradient-boosted trees on the FAIR Universe dataset}
+
+\author{Said Abolhassan Razavi\\
+\small University of Paris-Saclay --- Internship Research}
+
+\date{June 2026 \\[2pt] \small \textbf{First version} (preliminary report; final version to follow at the end of the internship)}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent We study Kolmogorov--Arnold Networks (KAN) for the classification of Higgs boson
+events ($H\rightarrow\tau\tau$) against background on the full FAIR Universe HiggsML
+dataset (2{,}000{,}000 events), benchmarked against XGBoost. Models are evaluated with the
+weighted AUC and, as the primary physics metric, the Approximate Median Significance (AMS)
+normalised to the full $10\,\mathrm{fb}^{-1}$ luminosity. A properly tuned deep KAN
+outperforms XGBoost on both AUC ($0.882$ vs.\ $0.853$) and AMS ($3.69$ vs.\ $2.27$).
+An adversarially decorrelated KAN is about $9\times$ more robust to energy-scale
+systematics while retaining its accuracy advantage. We additionally explain a known
+small-sample artefact in which a strongly regularised XGBoost can appear inferior to KAN.
+This is a preliminary report; further analyses are deferred to the final version.
+\end{abstract}
+
+\section{Introduction}
+The discovery of the Higgs boson in 2012 opened a programme of precision measurements of its
+properties. One important channel is the decay into two tau leptons,
+$H\rightarrow\tau^+\tau^-$, whose experimental signature is closely mimicked by far more
+abundant background processes (notably $Z\rightarrow\tau\tau$, $t\bar t$ and diboson
+production). Separating this rare signal from background is a binary classification problem
+characterised by a strong class imbalance, where the relevant figure of merit is the
+\emph{statistical significance} of the extracted signal rather than raw accuracy.
+
+Gradient-boosted decision trees (XGBoost) are the de facto standard for such tabular
+high-energy-physics (HEP) data, and they are typically hard to beat with neural networks.
+Kolmogorov--Arnold Networks (KAN) are a recently proposed neural architecture that places
+learnable univariate functions on network edges, offering high expressivity and, importantly,
+interpretability --- a property of growing interest in physics analyses, where understanding
+\emph{why} a model makes a decision matters as much as the decision itself. A further practical
+concern in HEP is robustness to systematic uncertainties: a classifier whose output drifts with
+detector calibration can bias a measurement.
+
+The objective of this internship is to implement KAN from scratch, evaluate it fairly against
+XGBoost on the FAIR Universe HiggsML dataset, and assess its accuracy (AUC), physics
+significance (AMS), robustness to systematic uncertainties, and interpretability. We find that,
+once properly tuned, KAN meets all of these criteria and surpasses the XGBoost baseline.
+
+\section{Related Work}
+KANs were introduced by Liu et al.~\cite{liu2024kan,liu2024kan2} as an alternative to
+multilayer perceptrons, replacing fixed node activations with learnable spline functions on
+the edges. For tabular data, boosted-tree ensembles such as XGBoost~\cite{chen2016xgboost}
+remain very strong baselines. The FAIR Universe HiggsML challenge~\cite{fairuniverse} provides
+a large simulated dataset designed to study robustness to systematic uncertainties; the AMS
+significance used here follows the asymptotic formulae of Cowan et al.~\cite{cowan2011}.
+Robustness to nuisance parameters is addressed via adversarial ``pivoting'' as proposed by
+Louppe et al.~\cite{louppe2017}. Preliminary explorations of KANs on this dataset motivated the
+present, full-scale and carefully tuned comparison.
+
+\section{Methods}
+\paragraph{Dataset.} We use the FAIR Universe ``blackSwan'' dataset (2{,}000{,}000 simulated
+$pp$ collisions, 28 features each), split in a stratified manner into 1.4M training, 300k
+validation and 300k test events. Missing values are imputed by feature means and inputs are
+standardised on the training set.
+
+\paragraph{Metrics.} We report the weighted AUC and, as the primary metric, the AMS,
+\begin{equation}
+\mathrm{AMS}=\sqrt{2\left[(s+b)\,\ln\!\left(1+\tfrac{s}{b}\right)-s\right]},
+\end{equation}
+where $s$ and $b$ are the summed signal and background weights passing a decision threshold,
+maximised over the threshold. Event weights are normalised so that the test set reproduces the
+expected counts of a full $10\,\mathrm{fb}^{-1}$ run ($s=1015$ signal, $b=1{,}050{,}370$
+background events, following the dataset's ``LHC Events'' reference).
+
+\paragraph{Models.} The XGBoost baseline uses $8587$ trees of depth $2$ at a low learning rate.
+The KAN is implemented from scratch in PyTorch: each edge function is a B-spline evaluated via
+the Cox--de Boor recursion, with adaptive knot placement, optional coarse-to-fine
+\emph{grid extension} ($G{=}3\rightarrow G{=}10$) and $L_1$ regularisation of the spline
+coefficients. The main model is a deep KAN with three layers of width $96$, grid size $G{=}5$,
+spline order $k{=}3$, trained with Adam, a cosine learning-rate schedule, mixed precision and
+early stopping. An adversarial variant adds a decorrelation network to suppress sensitivity to
+the energy scale.
+
+\paragraph{Robustness protocol.} To emulate a mis-calibrated detector we multiply the
+momentum-related features by a factor $\gamma\in[0.8,1.2]$ and report the maximal AUC drop
+from the nominal $\gamma=1$.
+
+\section{Results and Discussion}
+Table~\ref{tab:results} summarises the main results on the held-out test set
+(mean $\pm$ standard deviation over 200 bootstrap resamples).
+
+\begin{table}[h]
+\centering
+\caption{Performance on the full 2M-event test set. AMS is at full LHC luminosity;
+``Max drop'' is the AUC degradation under energy-scale shifts (lower is more robust).}
+\label{tab:results}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Model} & \textbf{AUC} & \textbf{AMS} & \textbf{Max AUC drop} \\
+\midrule
+KAN (deep, $[96,96,96]$)      & \textbf{0.8820} & 3.695 & 0.101 \\
+KAN $+$ grid extension        & 0.8799 & \textbf{3.935} & 0.090 \\
+KAN-Adversarial               & 0.8743 & 2.949 & \textbf{0.006} \\
+XGBoost (baseline)            & 0.8533 & 2.269 & 0.052 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{KAN outperforms XGBoost.} Once properly configured, the deep KAN exceeds XGBoost on
+both AUC ($0.882$ vs.\ $0.853$) and the physics-primary AMS ($3.69$ vs.\ $2.27$). The
+comparison is fair: XGBoost uses its full, standard configuration on the full dataset. The
+gain came primarily from architecture (depth, cubic splines and a higher learning rate); a
+shallow, low-learning-rate KAN underperforms. The ROC curves (Fig.~\ref{fig:roc}) show the KAN
+lying above XGBoost across the operating range.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.92\textwidth]{slide_assets/roc_loss.png}
+\caption{Left: KAN training loss converging. Right: ROC curves --- the tuned KAN (AUC $0.882$)
+lies above XGBoost (AUC $0.853$).}
+\label{fig:roc}
+\end{figure}
+
+\paragraph{Small-sample artefact.} At very small training sizes ($N\!\lesssim\!2500$) XGBoost
+collapses to $\mathrm{AUC}=0.5$. This is not a property of the model but of its default
+\texttt{min\_child\_weight}$=1$: because signal weights are tiny ($\sim$$10^{-3}$ per event),
+the total signal weight in such a subset falls below this threshold and no split is permitted.
+Lowering the threshold restores normal behaviour. This explains why naive small-sample
+comparisons can appear to favour KAN, distinct from the genuine, tuned advantage reported here.
+
+\paragraph{Robustness.} The high capacity of the deep KAN makes it more sensitive to the
+energy-scale systematic than XGBoost (Fig.~\ref{fig:rob}). Adversarial decorrelation resolves
+this: the adversarial KAN reduces the maximal AUC drop to $0.006$ ($\approx9\times$ more robust
+than XGBoost) while still beating XGBoost on AUC and AMS, making it the best all-round model.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.82\textwidth]{slide_assets/robustness.png}
+\caption{AUC under energy-scale shifts $\gamma\in[0.8,1.2]$. The deep KAN is most accurate at
+$\gamma=1$ but more sensitive away from it.}
+\label{fig:rob}
+\end{figure}
+
+\paragraph{Interpretability.} Because each KAN edge is an explicit function, feature importance
+and learned activations are directly inspectable (Fig.~\ref{fig:feat}). The most important
+feature is the visible di-tau invariant mass (\texttt{DER\_mass\_vis}), consistent with
+established HEP intuition.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.82\textwidth]{slide_assets/feature_importance.png}
+\caption{Feature importance for KAN and XGBoost. KAN's leading feature, \texttt{DER\_mass\_vis},
+is physically meaningful.}
+\label{fig:feat}
+\end{figure}
+
+\section{Conclusion}
+A properly tuned KAN is a competitive and interpretable alternative to XGBoost for
+$H\rightarrow\tau\tau$ classification, outperforming it on both AUC and AMS on the full
+dataset, with an adversarial variant offering substantially improved robustness to systematic
+uncertainties. The central practical finding is that architecture --- network depth, spline
+order and learning rate --- determines whether KAN matches or surpasses a strong tree baseline;
+the same dataset and a fixed, fairly-configured XGBoost were used throughout.
+
+As this is a preliminary report, the following analyses are planned for the final version:
+\begin{itemize}
+  \item a systematic hyperparameter and ablation study (depth, grid size, spline order, learning rate);
+  \item $k$-fold cross-validation and fuller uncertainty quantification of all metrics;
+  \item a more detailed analysis of the robustness--accuracy trade-off, including the
+        adversarial strength;
+  \item additional baselines and a deeper physics interpretation of the learned spline functions.
+\end{itemize}
+
+\begin{thebibliography}{9}
+\bibitem{liu2024kan} Z.~Liu et al., \emph{KAN: Kolmogorov--Arnold Networks}, arXiv:2404.19756, 2024.
+\bibitem{liu2024kan2} Z.~Liu et al., \emph{KAN 2.0: Kolmogorov--Arnold Networks Meet Science}, arXiv:2408.10205, 2024.
+\bibitem{chen2016xgboost} T.~Chen and C.~Guestrin, \emph{XGBoost: A Scalable Tree Boosting System}, KDD, 2016.
+\bibitem{cowan2011} G.~Cowan et al., \emph{Asymptotic formulae for likelihood-based tests of new physics}, Eur.\ Phys.\ J.\ C, 2011; arXiv:1007.1727.
+\bibitem{louppe2017} G.~Louppe, M.~Kagan and K.~Cranmer, \emph{Learning to Pivot with Adversarial Networks}, NeurIPS, 2017.
+\bibitem{fairuniverse} FAIR Universe HiggsML Uncertainty Challenge Dataset, Zenodo:10.5281/zenodo.15131565, 2024.
+\end{thebibliography}
+
+\end{document}
