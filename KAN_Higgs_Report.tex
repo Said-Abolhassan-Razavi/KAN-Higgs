@@ -24,39 +24,39 @@
 
 \begin{abstract}
 \noindent We study Kolmogorov--Arnold Networks (KAN) for the classification of Higgs boson
-events ($H\rightarrow\tau\tau$) against background on the full FAIR Universe HiggsML
-dataset (2{,}000{,}000 events), benchmarked against XGBoost. Models are evaluated with the
-weighted AUC and, as the primary physics metric, the Approximate Median Significance (AMS)
-normalised to the full $10\,\mathrm{fb}^{-1}$ luminosity. A properly tuned deep KAN
+events ($H\rightarrow\tau\tau$) against background on the FAIR Universe HiggsML dataset
+(a public sample of 2{,}000{,}000 events), benchmarked against XGBoost. Models are evaluated
+with the weighted AUC and, as the primary physics metric, the Approximate Median Significance
+(AMS) normalised to a $10\,\mathrm{fb}^{-1}$ luminosity. A properly tuned deep KAN
 outperforms XGBoost on both AUC ($0.882$ vs.\ $0.853$) and AMS ($3.69$ vs.\ $2.27$).
 An adversarially decorrelated KAN is about $9\times$ more robust to energy-scale
-systematics while retaining its accuracy advantage. We additionally explain a known
-small-sample artefact in which a strongly regularised XGBoost can appear inferior to KAN.
-This is a preliminary report; further analyses are deferred to the final version.
+systematics while retaining its accuracy advantage. This is a preliminary report; further
+analyses are deferred to the final version.
 \end{abstract}
 
 \section{Introduction}
-The discovery of the Higgs boson in 2012 opened a programme of precision measurements of its
-properties. One important channel is the decay into two tau leptons,
-$H\rightarrow\tau^+\tau^-$, whose experimental signature is closely mimicked by far more
-abundant background processes (notably $Z\rightarrow\tau\tau$, $t\bar t$ and diboson
-production). Separating this rare signal from background is a binary classification problem
-characterised by a strong class imbalance, where the relevant figure of merit is the
-\emph{statistical significance} of the extracted signal rather than raw accuracy.
+Machine-learning classifiers are central to modern high-energy-physics (HEP) analyses: almost
+every measurement or search relies on separating a signal process from large backgrounds, and
+the quality of that separation directly limits the physics reach. Classifiers that are
+simultaneously accurate, robust to systematic uncertainties, and interpretable are therefore of
+broad and growing interest.
 
-Gradient-boosted decision trees (XGBoost) are the de facto standard for such tabular
-high-energy-physics (HEP) data, and they are typically hard to beat with neural networks.
 Kolmogorov--Arnold Networks (KAN) are a recently proposed neural architecture that places
-learnable univariate functions on network edges, offering high expressivity and, importantly,
-interpretability --- a property of growing interest in physics analyses, where understanding
-\emph{why} a model makes a decision matters as much as the decision itself. A further practical
-concern in HEP is robustness to systematic uncertainties: a classifier whose output drifts with
-detector calibration can bias a measurement.
+learnable univariate functions on the network edges, offering high expressivity together with
+interpretability --- one can inspect \emph{why} a decision is made, which is valuable in
+physics. Gradient-boosted decision trees (XGBoost) are the de facto standard for tabular HEP
+data and are typically hard to beat with neural networks, providing a demanding baseline. To
+assess whether KAN is competitive we require a representative and reproducible benchmark.
 
-The objective of this internship is to implement KAN from scratch, evaluate it fairly against
-XGBoost on the FAIR Universe HiggsML dataset, and assess its accuracy (AUC), physics
-significance (AMS), robustness to systematic uncertainties, and interpretability. We find that,
-once properly tuned, KAN meets all of these criteria and surpasses the XGBoost baseline.
+We therefore study KAN on a typical, well-understood task: separating the Higgs-boson decay
+$H\rightarrow\tau^+\tau^-$ from its backgrounds (notably $Z\rightarrow\tau\tau$, $t\bar t$ and
+diboson production), a channel for which a large open dataset --- the FAIR Universe HiggsML
+sample --- is available. This is a strongly class-imbalanced problem in which the relevant
+figure of merit is the \emph{statistical significance} of the extracted signal rather than raw
+accuracy. The objective of this internship is to implement KAN from scratch, evaluate it fairly
+against XGBoost, and assess its accuracy (AUC), physics significance (AMS), robustness to
+systematic uncertainties, and interpretability. We find that, once properly tuned, KAN meets
+all of these criteria and surpasses the XGBoost baseline.
 
 \section{Related Work}
 KANs were introduced by Liu et al.~\cite{liu2024kan,liu2024kan2} as an alternative to
@@ -70,10 +70,13 @@ Louppe et al.~\cite{louppe2017}. Preliminary explorations of KANs on this datase
 present, full-scale and carefully tuned comparison.
 
 \section{Methods}
-\paragraph{Dataset.} We use the FAIR Universe ``blackSwan'' dataset (2{,}000{,}000 simulated
-$pp$ collisions, 28 features each), split in a stratified manner into 1.4M training, 300k
-validation and 300k test events. Missing values are imputed by feature means and inputs are
-standardised on the training set.
+\paragraph{Dataset.} We use the ``blackSwan'' sample of the FAIR Universe HiggsML public data,
+comprising $2{,}000{,}000$ simulated $pp$ collisions with 28 features each. We adopt this
+sample because it is large enough to train and evaluate the models robustly while remaining
+computationally tractable; it is a subset of the substantially larger full simulated
+production. The data are split in a stratified manner into 1.4M training, 300k validation and
+300k test events; missing values are imputed by feature means and all inputs are standardised
+using training-set statistics.
 
 \paragraph{Metrics.} We report the weighted AUC and, as the primary metric, the AMS,
 \begin{equation}
@@ -81,21 +84,27 @@ standardised on the training set.
 \end{equation}
 where $s$ and $b$ are the summed signal and background weights passing a decision threshold,
 maximised over the threshold. Event weights are normalised so that the test set reproduces the
-expected counts of a full $10\,\mathrm{fb}^{-1}$ run ($s=1015$ signal, $b=1{,}050{,}370$
+expected counts of a $10\,\mathrm{fb}^{-1}$ run ($s=1015$ signal, $b=1{,}050{,}370$
 background events, following the dataset's ``LHC Events'' reference).
 
-\paragraph{Models.} The XGBoost baseline uses $8587$ trees of depth $2$ at a low learning rate.
-The KAN is implemented from scratch in PyTorch: each edge function is a B-spline evaluated via
-the Cox--de Boor recursion, with adaptive knot placement, optional coarse-to-fine
-\emph{grid extension} ($G{=}3\rightarrow G{=}10$) and $L_1$ regularisation of the spline
-coefficients. The main model is a deep KAN with three layers of width $96$, grid size $G{=}5$,
-spline order $k{=}3$, trained with Adam, a cosine learning-rate schedule, mixed precision and
-early stopping. An adversarial variant adds a decorrelation network to suppress sensitivity to
-the energy scale.
+\paragraph{Models.} The XGBoost baseline uses $8587$ trees of depth $2$ at a learning rate of
+$9.1\times10^{-4}$. These hyperparameters were adopted from a prior hyperparameter search
+rather than re-optimised on this dataset; a dedicated XGBoost hyperparameter optimisation on
+the present data is planned for the final version. The KAN is implemented from scratch in
+PyTorch: each edge function is a B-spline evaluated via the Cox--de Boor recursion, with
+adaptive knot placement, optional coarse-to-fine \emph{grid extension} ($G{=}3\rightarrow
+G{=}10$) and $L_1$ regularisation of the spline coefficients. The main model is a deep KAN with
+three layers of width $96$, grid size $G{=}5$ and spline order $k{=}3$, giving about
+$1.9\times10^{5}$ trainable parameters; it is trained with Adam, a cosine learning-rate
+schedule, mixed precision and early stopping. An adversarial variant adds a decorrelation
+network to suppress sensitivity to the energy scale.
 
-\paragraph{Robustness protocol.} To emulate a mis-calibrated detector we multiply the
-momentum-related features by a factor $\gamma\in[0.8,1.2]$ and report the maximal AUC drop
-from the nominal $\gamma=1$.
+\paragraph{Robustness protocol.} To emulate a mis-calibrated detector we scale the
+momentum- and energy-related features --- the transverse momenta ($p_T$ of the lepton,
+hadronic tau and jets, and their sum $\texttt{DER\_sum\_pt}$), the reconstructed masses
+($\texttt{DER\_mass\_*}$) and the missing transverse energy ($\texttt{PRI\_met}$) --- by a
+common factor $\gamma\in[0.8,1.2]$, and report the maximal AUC drop from the nominal
+$\gamma=1$ (lower is more robust).
 
 \section{Results and Discussion}
 Table~\ref{tab:results} summarises the main results on the held-out test set
@@ -103,8 +112,8 @@ Table~\ref{tab:results} summarises the main results on the held-out test set
 
 \begin{table}[h]
 \centering
-\caption{Performance on the full 2M-event test set. AMS is at full LHC luminosity;
-``Max drop'' is the AUC degradation under energy-scale shifts (lower is more robust).}
+\caption{Performance on the held-out test set (300{,}000 events). AMS is at $10\,\mathrm{fb}^{-1}$
+LHC luminosity; ``Max drop'' is the AUC degradation under energy-scale shifts (lower is more robust).}
 \label{tab:results}
 \begin{tabular}{lccc}
 \toprule
@@ -119,9 +128,10 @@ XGBoost (baseline)            & 0.8533 & 2.269 & 0.052 \\
 \end{table}
 
 \paragraph{KAN outperforms XGBoost.} Once properly configured, the deep KAN exceeds XGBoost on
-both AUC ($0.882$ vs.\ $0.853$) and the physics-primary AMS ($3.69$ vs.\ $2.27$). The
-comparison is fair: XGBoost uses its full, standard configuration on the full dataset. The
-gain came primarily from architecture (depth, cubic splines and a higher learning rate); a
+both AUC ($0.882$ vs.\ $0.853$) and the physics-primary AMS ($3.69$ vs.\ $2.27$). Both models
+are trained and evaluated on the same data, with XGBoost using a fixed, standard configuration
+(see Section~3). The gain came primarily from architecture (depth, cubic splines and a higher
+learning rate); a
 shallow, low-learning-rate KAN underperforms. The ROC curves (Fig.~\ref{fig:roc}) show the KAN
 lying above XGBoost across the operating range.
 
@@ -132,13 +142,6 @@ lying above XGBoost across the operating range.
 lies above XGBoost (AUC $0.853$).}
 \label{fig:roc}
 \end{figure}
-
-\paragraph{Small-sample artefact.} At very small training sizes ($N\!\lesssim\!2500$) XGBoost
-collapses to $\mathrm{AUC}=0.5$. This is not a property of the model but of its default
-\texttt{min\_child\_weight}$=1$: because signal weights are tiny ($\sim$$10^{-3}$ per event),
-the total signal weight in such a subset falls below this threshold and no split is permitted.
-Lowering the threshold restores normal behaviour. This explains why naive small-sample
-comparisons can appear to favour KAN, distinct from the genuine, tuned advantage reported here.
 
 \paragraph{Robustness.} The high capacity of the deep KAN makes it more sensitive to the
 energy-scale systematic than XGBoost (Fig.~\ref{fig:rob}). Adversarial decorrelation resolves
@@ -154,9 +157,13 @@ $\gamma=1$ but more sensitive away from it.}
 \end{figure}
 
 \paragraph{Interpretability.} Because each KAN edge is an explicit function, feature importance
-and learned activations are directly inspectable (Fig.~\ref{fig:feat}). The most important
+and learned activations are directly inspectable (Fig.~\ref{fig:feat}). KAN's most important
 feature is the visible di-tau invariant mass (\texttt{DER\_mass\_vis}), consistent with
-established HEP intuition.
+established HEP intuition. We stress that the KAN and XGBoost importances in Fig.~\ref{fig:feat}
+are computed by \emph{different} measures (the $L_2$ norm of the spline weights and the XGBoost
+``gain'', respectively) and are therefore not directly comparable; the two models also rely on
+rather different features. A common, model-agnostic measure (e.g.\ permutation importance) is
+planned for the final version.
 
 \begin{figure}[h]
 \centering
@@ -168,18 +175,21 @@ is physically meaningful.}
 
 \section{Conclusion}
 A properly tuned KAN is a competitive and interpretable alternative to XGBoost for
-$H\rightarrow\tau\tau$ classification, outperforming it on both AUC and AMS on the full
-dataset, with an adversarial variant offering substantially improved robustness to systematic
+$H\rightarrow\tau\tau$ classification, outperforming it on both AUC and AMS on the held-out
+test set, with an adversarial variant offering substantially improved robustness to systematic
 uncertainties. The central practical finding is that architecture --- network depth, spline
 order and learning rate --- determines whether KAN matches or surpasses a strong tree baseline;
-the same dataset and a fixed, fairly-configured XGBoost were used throughout.
+the same dataset and a fixed XGBoost configuration were used throughout.
 
 As this is a preliminary report, the following analyses are planned for the final version:
 \begin{itemize}
-  \item a systematic hyperparameter and ablation study (depth, grid size, spline order, learning rate);
-  \item $k$-fold cross-validation and fuller uncertainty quantification of all metrics;
-  \item a more detailed analysis of the robustness--accuracy trade-off, including the
-        adversarial strength;
+  \item a dedicated hyperparameter optimisation of the XGBoost baseline on this dataset;
+  \item a study of performance versus the number of training events (learning curves);
+  \item a study of the correlation between the XGBoost and KAN predictions --- motivated by
+        their rather different feature usage (Fig.~\ref{fig:feat}) --- together with a common,
+        model-agnostic evaluation of feature importance;
+  \item a systematic hyperparameter and ablation study of the KAN (depth, grid size, spline
+        order, learning rate) with $k$-fold cross-validation and fuller uncertainty quantification;
   \item additional baselines and a deeper physics interpretation of the learned spline functions.
 \end{itemize}
 
